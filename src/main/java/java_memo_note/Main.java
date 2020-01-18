@@ -1,7 +1,12 @@
 package java_memo_note;
 
+import java.util.Optional;
 import javafx.application.Application;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
+import javafx.scene.control.ButtonBar.ButtonData;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
@@ -11,13 +16,13 @@ import javafx.stage.Stage;
 
 public class Main extends Application {
 
-  final TextArea textArea = new TextArea();
-  final MenuBar menuBar = new MenuBar();
 
   @Override
   public void start(Stage stage) throws Exception {
-        createFileMenu();
-        createEditMenu();
+    final TextArea textArea = new TextArea();
+    final MenuBar menuBar = new MenuBar();
+    createFileMenu(menuBar, textArea);
+    createEditMenu(menuBar);
     BorderPane pane = new BorderPane();
     pane.setCenter(textArea);
     pane.setTop(menuBar);
@@ -27,7 +32,7 @@ public class Main extends Application {
   }
 
   /*編集メニューを追加*/
-  public void createEditMenu() {
+  private void createEditMenu(final MenuBar menuBar) {
     final Menu editMenu = new Menu("編集");
     final MenuItem restoreItemMenu = new MenuItem("元に戻す");
     final MenuItem cutItemMenu = new MenuItem("切り取り");
@@ -41,7 +46,7 @@ public class Main extends Application {
   }
 
   /*ファイルメニューを追加*/
-  public void createFileMenu() {
+  private void createFileMenu(final MenuBar menuBar, final TextArea textArea) {
     final Menu fileMenu = new Menu("ファイル");
     final MenuItem newItemMenu = new MenuItem("新規");
     final MenuItem newWindowItemMenu = new MenuItem("新規ウインドウ");
@@ -59,5 +64,10 @@ public class Main extends Application {
             saveItemMenu,
             finishItemMenu);
     menuBar.getMenus().add(fileMenu);
+    newItemMenu.setOnAction(event -> createNewFile(textArea));
+  }
+
+  private void createNewFile(final TextArea textArea) {
+    textArea.clear();
   }
 }
