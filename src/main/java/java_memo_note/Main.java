@@ -6,9 +6,10 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Date;
 import java.util.Optional;
 import javafx.application.Application;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
@@ -21,11 +22,17 @@ import javafx.scene.control.TextArea;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import javafx.stage.WindowEvent;
+import org.checkerframework.checker.units.qual.s;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class Main extends Application {
+
   Path filePath;
+  Boolean flag;
+  Optional<ButtonType> result;
+  Boolean closeFlag;
 
   @Override
   public void start(final Stage stage) throws Exception {
@@ -40,6 +47,13 @@ public class Main extends Application {
     stage.setScene(scene);
     stage.setTitle("無題");
     stage.show();
+    flag = checkChange(textArea);
+    stage.setOnCloseRequest((WindowEvent event) -> {
+      closeNote(textArea, stage);
+      if (closeFlag == false) {
+        event.consume();
+      }
+    });
   }
 
   /* 編集メニューを追加 */
@@ -56,7 +70,7 @@ public class Main extends Application {
   }
 
   /* ファイルメニューを追加 */
-  private void createFileMenu(final MenuBar menuBar, final TextArea textArea, Stage stage) {
+  private void createFileMenu(final MenuBar menuBar, final TextArea textArea, final Stage stage) {
     final Menu fileMenu = new Menu("ファイル");
     final MenuItem newItemMenu = new MenuItem("新規");
     final MenuItem newWindowItemMenu = new MenuItem("新規ウインドウ");
@@ -70,13 +84,14 @@ public class Main extends Application {
     newItemMenu.setOnAction(event -> createNewFile(textArea));
     saveItemMenu.setOnAction(event -> save(textArea, stage));
     saveAgainItemMenu.setOnAction(event -> overrideSave(textArea));
+    finishItemMenu.setOnAction(event -> closeNote(textArea, stage));
   }
 
   private void createNewFile(final TextArea textArea) {
     textArea.clear();
   }
 
-  private void save(final TextArea textArea, Stage stage) {
+  private void save(final TextArea textArea, final Stage stage) {
     final FileChooser fileChooser = new FileChooser();
     fileChooser.setTitle("名前を付けて保存");
     fileChooser.setInitialDirectory(new File(System.getProperty("user.home") + "/Desktop"));
@@ -91,13 +106,16 @@ public class Main extends Application {
         bufferedWriter.append(textArea.getText());
         bufferedWriter.close();
       } catch (final IOException e) {
+        System.out.println(e.toString());
         final Logger logger = LoggerFactory.getLogger(Main.class);
         logger.error("error", e);
       }
+    } else {
+      closeFlag = false;
     }
   }
 
-  private void overrideSave(TextArea textArea) {
+  private void overrideSave(final TextArea textArea) {
     if (filePath != null) {
       try {
         final BufferedWriter bufferedWriter =
@@ -105,11 +123,61 @@ public class Main extends Application {
         bufferedWriter.append(textArea.getText());
         bufferedWriter.close();
       } catch (final IOException e) {
+        System.out.println(e.toString());
         final Logger logger = LoggerFactory.getLogger(Main.class);
         logger.error("error", e);
       }
     } else {
       System.out.println("error");
     }
+  }
+
+  private void closeNote(final TextArea textArea, Stage stage) {
+    final Optional<ButtonType> result = checkSave(textArea);
+    if (result != null && result.isPresent()) {
+      if (result.get().getButtonData() == ButtonData.YES) {
+        closeFlag = true;
+        save(textArea, stage);
+        if (closeFlag == true) {
+          stage.close();
+        }
+      } else if (result.get().getButtonData() == ButtonData.NO) {
+        closeFlag = true;
+        stage.close();
+      } else {
+        closeFlag = false;
+      }
+    } else {
+      closeFlag = true;
+      stage.close();
+    }
+  }
+
+  private Optional<ButtonType> checkSave(final TextArea textArea) {
+    // final Boolean flag = checkChange(textArea);
+    if (flag == true) {
+      final Alert alert = new Alert(AlertType.NONE);
+      final ButtonType buttonTypeSave = new ButtonType("保存する", ButtonData.YES);
+      final ButtonType buttonTypeNoSave = new ButtonType("保存しない", ButtonData.NO);
+      final ButtonType buttonTypeCancel = new ButtonType("キャンセル", ButtonData.CANCEL_CLOSE);
+      alert.setContentText("ファイルを保存しますか");
+      alert.setTitle("メモ帳");
+      alert.getButtonTypes().addAll(buttonTypeSave, buttonTypeNoSave, buttonTypeCancel);
+      result = alert.showAndWait();
+    }
+    return result;
+  }
+
+  private Boolean checkChange(final TextArea textArea) {
+    flag = false;
+    textArea.textProperty().addListener(new ChangeListener<String>() {
+      @Override
+      public void changed(final ObservableValue<? extends String> observableValue, final String s,
+          final String t1) {
+        textArea.textProperty().removeListener(this);
+        flag = true;
+      }
+    });
+    return flag;
   }
 }
