@@ -33,9 +33,11 @@ public class Main extends Application {
   Boolean flag;
   Optional<ButtonType> result;
   Boolean closeFlag;
+  String noteTitle;
 
   @Override
   public void start(final Stage stage) throws Exception {
+    noteTitle = "無題";
     final TextArea textArea = new TextArea();
     final MenuBar menuBar = new MenuBar();
     createFileMenu(menuBar, textArea, stage);
@@ -45,7 +47,7 @@ public class Main extends Application {
     pane.setTop(menuBar);
     final Scene scene = new Scene(pane, 500, 500);
     stage.setScene(scene);
-    stage.setTitle("無題");
+    stage.setTitle(noteTitle);
     stage.show();
     flag = checkChange(textArea);
     stage.setOnCloseRequest((WindowEvent event) -> {
@@ -81,14 +83,26 @@ public class Main extends Application {
     fileMenu.getItems().addAll(newItemMenu, newWindowItemMenu, openItemMenu, saveAgainItemMenu,
         saveItemMenu, finishItemMenu);
     menuBar.getMenus().add(fileMenu);
-    newItemMenu.setOnAction(event -> createNewFile(textArea));
+    newItemMenu.setOnAction(event -> createNewFile(textArea, stage));
     saveItemMenu.setOnAction(event -> save(textArea, stage));
     saveAgainItemMenu.setOnAction(event -> overrideSave(textArea));
     finishItemMenu.setOnAction(event -> closeNote(textArea, stage));
   }
 
-  private void createNewFile(final TextArea textArea) {
-    textArea.clear();
+  private void createNewFile(final TextArea textArea, Stage stage) {
+    final Optional<ButtonType> result = checkSave(textArea);
+    if (result != null && result.isPresent()) {
+      if (result.get().getButtonData() == ButtonData.YES) {
+        save(textArea, stage);
+        textArea.clear();
+        noteTitle = "無題";
+        stage.setTitle(noteTitle);
+      } else if (result.get().getButtonData() == ButtonData.NO) {
+        textArea.clear();
+        noteTitle = "無題";
+        stage.setTitle(noteTitle);
+      }
+    }
   }
 
   private void save(final TextArea textArea, final Stage stage) {
@@ -102,7 +116,8 @@ public class Main extends Application {
         filePath = file.toPath();
         final BufferedWriter bufferedWriter =
             Files.newBufferedWriter(filePath, StandardCharsets.UTF_8);
-        stage.setTitle(file.getName());
+        noteTitle = file.getName();
+        stage.setTitle(noteTitle);
         bufferedWriter.append(textArea.getText());
         bufferedWriter.close();
       } catch (final IOException e) {
