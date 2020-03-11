@@ -73,7 +73,6 @@ public class Main extends Application {
     final MenuItem copyItemMenu = new MenuItem("コピー");
     final MenuItem pasteItemMenu = new MenuItem("貼り付け");
     final MenuItem deleteItemMenu = new MenuItem("削除");
-    var test = true;
     editMenu.getItems().addAll(restoreItemMenu, cutItemMenu, copyItemMenu, pasteItemMenu, deleteItemMenu);
     menuBar.getMenus().add(editMenu);
     copyItemMenu.setOnAction(event -> {
