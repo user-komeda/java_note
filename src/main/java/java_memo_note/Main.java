@@ -1,5 +1,6 @@
 package java_memo_note;
 
+import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
@@ -37,15 +38,21 @@ public class Main extends Application {
 
   @Override
   public void start(final Stage stage) throws Exception {
+    if (true) {
+
+    }
     noteTitle = "無題";
     final TextArea textArea = new TextArea();
     final MenuBar menuBar = new MenuBar();
     createFileMenu(menuBar, textArea, stage);
-    createEditMenu(menuBar);
+    createEditMenu(menuBar, textArea);
     final BorderPane pane = new BorderPane();
     pane.setCenter(textArea);
     pane.setTop(menuBar);
     final Scene scene = new Scene(pane, 500, 500);
+    scene.setOnMouseDragged(e -> {
+      System.out.println("マウスがドラッグされました。");
+    });
     stage.setScene(scene);
     stage.setTitle(noteTitle);
     stage.show();
@@ -59,16 +66,22 @@ public class Main extends Application {
   }
 
   /* 編集メニューを追加 */
-  private void createEditMenu(final MenuBar menuBar) {
+  private void createEditMenu(final MenuBar menuBar, final TextArea textArea) {
     final Menu editMenu = new Menu("編集");
     final MenuItem restoreItemMenu = new MenuItem("元に戻す");
     final MenuItem cutItemMenu = new MenuItem("切り取り");
     final MenuItem copyItemMenu = new MenuItem("コピー");
     final MenuItem pasteItemMenu = new MenuItem("貼り付け");
     final MenuItem deleteItemMenu = new MenuItem("削除");
-    editMenu.getItems().addAll(restoreItemMenu, cutItemMenu, copyItemMenu, pasteItemMenu,
-        deleteItemMenu);
+    var test = true;
+    editMenu.getItems().addAll(restoreItemMenu, cutItemMenu, copyItemMenu, pasteItemMenu, deleteItemMenu);
     menuBar.getMenus().add(editMenu);
+    copyItemMenu.setOnAction(event -> {
+      textArea.copy();
+    });
+    pasteItemMenu.setOnAction(event -> {
+      textArea.paste();
+    });
   }
 
   /* ファイルメニューを追加 */
@@ -80,13 +93,14 @@ public class Main extends Application {
     final MenuItem saveAgainItemMenu = new MenuItem("上書き保存");
     final MenuItem saveItemMenu = new MenuItem("名前を付けて保存");
     final MenuItem finishItemMenu = new MenuItem("終了");
-    fileMenu.getItems().addAll(newItemMenu, newWindowItemMenu, openItemMenu, saveAgainItemMenu,
-        saveItemMenu, finishItemMenu);
+    fileMenu.getItems().addAll(newItemMenu, newWindowItemMenu, openItemMenu, saveAgainItemMenu, saveItemMenu,
+        finishItemMenu);
     menuBar.getMenus().add(fileMenu);
     newItemMenu.setOnAction(event -> createNewFile(textArea, stage));
     saveItemMenu.setOnAction(event -> save(textArea, stage));
     saveAgainItemMenu.setOnAction(event -> overrideSave(textArea));
     finishItemMenu.setOnAction(event -> closeNote(textArea, stage));
+    openItemMenu.setOnAction(event -> openFile(textArea, stage));
   }
 
   private void createNewFile(final TextArea textArea, Stage stage) {
@@ -114,8 +128,7 @@ public class Main extends Application {
     if (file != null) {
       try {
         filePath = file.toPath();
-        final BufferedWriter bufferedWriter =
-            Files.newBufferedWriter(filePath, StandardCharsets.UTF_8);
+        final BufferedWriter bufferedWriter = Files.newBufferedWriter(filePath, StandardCharsets.UTF_8);
         noteTitle = file.getName();
         stage.setTitle(noteTitle);
         bufferedWriter.append(textArea.getText());
@@ -133,8 +146,7 @@ public class Main extends Application {
   private void overrideSave(final TextArea textArea) {
     if (filePath != null) {
       try {
-        final BufferedWriter bufferedWriter =
-            Files.newBufferedWriter(filePath, StandardCharsets.UTF_8);
+        final BufferedWriter bufferedWriter = Files.newBufferedWriter(filePath, StandardCharsets.UTF_8);
         bufferedWriter.append(textArea.getText());
         bufferedWriter.close();
       } catch (final IOException e) {
@@ -187,12 +199,44 @@ public class Main extends Application {
     flag = false;
     textArea.textProperty().addListener(new ChangeListener<String>() {
       @Override
-      public void changed(final ObservableValue<? extends String> observableValue, final String s,
-          final String t1) {
+      public void changed(final ObservableValue<? extends String> observableValue, final String s, final String t1) {
         textArea.textProperty().removeListener(this);
         flag = true;
       }
     });
     return flag;
+  }
+
+  private void openFile(TextArea textArea, Stage stage) {
+    final Optional<ButtonType> result = checkSave(textArea);
+    if (result != null && result.isPresent()) {
+      if (result.get().getButtonData() == ButtonData.YES) {
+        save(textArea, stage);
+      } else if (result.get().getButtonData() == ButtonData.CANCEL_CLOSE) {
+        return;
+      }
+    }
+    final FileChooser fileChooser = new FileChooser();
+    fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("すべてのファイル", "*.txt"));
+    fileChooser.setInitialDirectory(new File(System.getProperty("user.home") + "/Desktop"));
+    fileChooser.setTitle("開く");
+    final File file = fileChooser.showOpenDialog(null);
+    String lines = "";
+    if (file != null) {
+      try {
+        textArea.clear();
+        final BufferedReader bufferedReader = Files.newBufferedReader(file.toPath(), StandardCharsets.UTF_8);
+        while ((lines = bufferedReader.readLine()) != null) {
+          textArea.appendText(lines + "\n");
+        }
+        bufferedReader.close();
+      } catch (final IOException e) {
+        final Alert alert = new Alert(AlertType.ERROR);
+        alert.setContentText("ファイルの読み込みに失敗しました");
+        alert.show();
+        final Logger logger = LoggerFactory.getLogger(Main.class);
+        logger.error("error", e);
+      }
+    }
   }
 }
